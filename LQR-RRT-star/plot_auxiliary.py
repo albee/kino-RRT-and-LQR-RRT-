@@ -69,7 +69,6 @@ def plot_path_np(V, E, goal_path, bounds):
 
     # Initialize figure and axes
     fig, ax = plt.subplots(1, 1, figsize=(10, 7))
-    print x_min, x_max
     ax.set_xlim(xmin=x_min, xmax=x_max)
     ax.set_ylim(ymin=y_min, ymax=y_max)
     plt.autoscale(False)
@@ -109,6 +108,7 @@ def plot_near_nodes(near_nodes, fig_num, new_node, rand_state):
 
 def plot_path_np_no_goal(E, fig_num):
     fig = plt.figure(fig_num)
+
     # Plot tree
     for edge in E:
         start_state = edge[0].state
@@ -132,13 +132,9 @@ def init_plot_path_np_no_goal(V, E, bounds):
 
     # Initialize figure and axes
     fig, ax = plt.subplots(1, 1, figsize=(10, 7))
-
-    plt.grid()
-    # ax.set_aspect('equal', adjustable='box')
-
     ax.set_xlim(xmin=x_min, xmax=x_max)
     ax.set_ylim(ymin=y_min, ymax=y_max)
-    # plt.axis('equal')
+    plt.grid()
     plt.autoscale(False)
 
     # Plot tree
@@ -169,15 +165,12 @@ def rewire_plot_np_no_goal(idx, fig_num, new_node_state, near_node_state):
     fig = plt.figure(fig_num)
     # print(type(fig.axes[0].lines[idx]))
     # fig.axes[0].lines[idx].set_color('r')
-    print "E lines ", len(fig.axes[0].lines)
-
     # fig.axes[0].plot([new_node_state[0], near_node_state[0]], [new_node_state[1], near_node_state[1]], 'g')
 
     fig.axes[0].lines[idx].set_xdata( [new_node_state[0], near_node_state[0]] )
     fig.axes[0].lines[idx].set_ydata( [new_node_state[1], near_node_state[1]] )
     fig.canvas.draw()
     # fig.axes[0].lines[idx].remove()
-    print 'removed!!'
     plt.draw()
     plt.pause(0.001)
 

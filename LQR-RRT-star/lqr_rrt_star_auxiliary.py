@@ -11,9 +11,9 @@ import random
 from plot_auxiliary import *
 
 
-# Method to calculate nearest node to randomly generated state in existing tree
+# Method to calculate nearest node to randomly generated state in existing tree, using
+# linearized LQR cost-to-go about rand_state
 def LQR_nearest(V, rand_state):
-
     # Unpack randomly generated state
     x_rand  = rand_state[0]
     y_rand  = rand_state[1]
@@ -47,7 +47,8 @@ def LQR_nearest(V, rand_state):
     # Return nearest node
     return nearest_node
 
-# Method to calculate nearest node to randomly generated state in existing tree
+# Method to calculate nearest node to randomly generated state in existing tree,
+# using L2-norm
 def L2_nearest(V, to_state):
 
     # Unpack randomly generated state
@@ -85,10 +86,8 @@ def L2_nearest(V, to_state):
 
 
 # Method to steer robot in direction of the randomly generated state
-# Currently, this uses random sampling of u. However, it should really be applying
-# the LQR policy used for evaluating cost-to-go.
-# Now uses random steering.
-def LQR_steer(nearest_node, rand_state, d_max, ctrl_bounds, dt, t_step, bounds):
+# Uses motion primitive steering.
+def guided_steer(nearest_node, rand_state, d_max, ctrl_bounds, dt, t_step, bounds):
     # Calculate LQR cost matrix
     P = calc_cost_matrix(rand_state)
 
@@ -101,20 +100,16 @@ def LQR_steer(nearest_node, rand_state, d_max, ctrl_bounds, dt, t_step, bounds):
 
     for i in range(control_options.shape[1]):
         u_optimal = control_options[:,i]
+
         # Euler integration loop
         new_state = nearest_state
         t_k = 0.0
-        # print(u_optimal)
-        # plt.pause(1)
         while t_k < t_step:
-
             for i in range(len(u_optimal)):
                 if u_optimal[i] < 0:
                     u_optimal[i] = 0
                 if u_optimal[i] > my_sat.Fmax:
                     u_optimal[i] = my_sat.Fmax
-
-            # break
 
             # Calculate new node position - Evaluate forward dynamics
             dotx = my_sat.satellite_dynamics(new_state, u_optimal)
@@ -137,13 +132,62 @@ def LQR_steer(nearest_node, rand_state, d_max, ctrl_bounds, dt, t_step, bounds):
             min_dist = option_dist
             return_state = new_state
 
-    control = 'blargh'
+    control = 'TODO'  # save control
 
     # Calculate new node cost
     cost = nearest_node.cost + min_dist #dist[idx]
 
     # Create new node
     new_node = SearchNode(return_state, nearest_node, cost, control)
+
+    # Return new node
+    return new_node
+
+# Method to steer robot in direction of the randomly generated state
+# Uses the linearized infinite horizon LQR policy.
+def LQR_steer(nearest_node, rand_state, d_max, ctrl_bounds, dt, t_step, bounds):
+    # Calculate LQR cost matrix
+    P = calc_cost_matrix(rand_state)
+
+    # Unpack nearest node
+    nearest_state = nearest_node.state
+    my_sat = dynamics.Dynamics3DoF()
+
+    ### LQR policy evaluation
+    K = calc_K_matrix(rand_state, P)  # believe this should be around rand_state, otherwise not sure how to interpret
+
+    # Euler integration loop
+    new_state = nearest_state
+    t_k = 0.0
+    while t_k < t_step:
+        # Use LQR policy about x_rand
+        u_optimal = -K.dot(new_state - rand_state)
+        max_mag = np.amax(np.absolute(u_optimal))
+        if max_mag > my_sat.Fmax:
+            u_optimal = u_optimal/max_mag
+            # u_optimal = np.clip(u_optimal, -my_sat.Fmax, my_sat.Fmax)
+
+        # Calculate new node position - Evaluate forward dynamics
+        dotx = my_sat.satellite_dynamics(new_state, u_optimal)
+        new_state = new_state + dt*dotx
+        # wrap angle
+        theta = new_state[4]
+        theta = theta%(2*math.pi)
+        if theta > math.pi:
+            theta -= 2*math.pi
+        new_state[4] = theta
+        t_k += dt
+
+    # TODO: this is not recording the correct control
+    # TODO: make sure control is clipped down properly
+    control = u_optimal
+    dist = lqr_distance(new_state, rand_state, P)
+
+    # Calculate new node cost
+    cost = nearest_node.cost + dist #dist[idx]
+
+    # Create new node
+    new_node = SearchNode(new_state, nearest_node, cost, control)
 
     # Return new node
     return new_node
@@ -192,7 +236,7 @@ def random_steer(nearest_node, rand_state, d_max, ctrl_bounds, dt, t_step, bound
     control = u_optimal
 
     # Calculate new node cost
-    cost = nearest_node.cost + min_dist #dist[idx]
+    cost = nearest_node.cost + min_dist
 
     # Create new node
     new_node = SearchNode(return_state, nearest_node, cost, control)
@@ -273,7 +317,7 @@ def rewire_from_x_new(near_nodes, new_node, E, fig_num, show_anim):
             E[idx][0] = new_node
             near_node.cost = cost_from_x_new
             near_node.parent = new_node
-            print "rewired!!!"
+            print "rewired performed!"
 
             # rewire the plot
             if show_anim == True:
@@ -295,7 +339,7 @@ def get_ball_radius(card_V, state_dimension, volume_obstacle_free, max_dist):
     gamma = gamma_star*1.0 # must be larger than gamma*, provided by Karaman
     return min(gamma * math.log(card_V)/card_V, max_dist)
 
-# Straight-line path from node-to-node. Should be augmented to cost-to-go.
+# LQR cost-to-go between any two points.
 def line(from_node, to_node):
     state_from = from_node.state
     state_to = to_node.state
@@ -306,10 +350,11 @@ def line(from_node, to_node):
     # cost_to_go = L2_distance(state_from, state_to)
     return cost_to_go
 
+# Does collision checking. Not currently implemented.
 def collision_free(node_from, node_to):
     return True
 
-# equivalent to obstacle_free from [Karaman and Frazzoli, 2011]
+# Equivalent to obstacle_free() from [Karaman and Frazzoli, 2011]
 def in_bounds(state, bounds):
     # Unpack state
     x = state[0]
@@ -375,14 +420,14 @@ def volume_obstacle_free(bounds, state_dimension):
         h_min  = bounds[8]; h_max  = bounds[9]; w_min  = bounds[10]; w_max  = bounds[11]
         return (x_max - x_min)*(y_max - y_min)*(vx_max - vx_min)*(vy_max - vy_min)*(h_max - h_min)*(w_max - w_min)
     else:
-        raise NameError('not yet implemented dude')
+        raise NameError('Not yet implemented for this state space.')
 
 
 
-### LQR support
+### LQR and distance metric support
+
 # L2 norm, with tweak for angle
 def L2_distance(state_from, state_to):
-    print "don't use me too!!"
     h_dist = state_from[4] - state_to[4]
     if h_dist > math.pi: h_dist -= 2*math.pi
     elif h_dist < -math.pi: h_dist += 2*math.pi

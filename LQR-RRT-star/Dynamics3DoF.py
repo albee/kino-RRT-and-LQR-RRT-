@@ -1,5 +1,6 @@
 '''
 Dynamics and supporting functions for an underactuated satellite.
+Includes animation routines.
 
 Hailee Hettrick and Keenan Albee
 '''
@@ -8,10 +9,6 @@ from numpy import sin, cos
 import numpy as np
 import math
 import time
-
-# from pydrake.all import MathematicalProgram, Solve, IpoptSolver, SolverOptions
-# from pydrake.math import sin, cos
-
 import matplotlib.animation as anim
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
@@ -100,6 +97,8 @@ class Dynamics3DoF():
         [ [x_0, y_0, dot{x}_0, dot{y}_0, h_0, w_0],
           ...
           [x_N, y_N, dot{x}_N, dot{y}_N], h_N, w_N]
+
+    Adapted from 6.832.
     '''
     def simulate_trajectory(self, state_initial, time_vec, input_array):
         trajectory = np.asarray([state_initial])
@@ -129,6 +128,8 @@ class Dynamics3DoF():
 
     def plot_trajectory(self, trajectory, input_array):
         plot_trajectory(trajectory, input_array, self.Fmax)
+
+
 
 '''
 Given a trajectory and an input_array, plots this trajectory and control inputs over time.
@@ -164,9 +165,7 @@ def plot_trajectory(trajectory, input_array, input_max):
     plt.plot(pos_x[0],pos_y[0],"or")  # start state
     plt.plot(pos_x[-1],pos_y[-1],"ok")  # final state
 
-    # plt.grid(True)
-
-    animate_rect(fig, axes, pos_x, pos_y, theta_z, input_array, input_max, collage=False, record=True)
+    animate_rect(fig, axes, pos_x, pos_y, theta_z, input_array, input_max, collage=False, record=False)
     plt.pause(100)
 
 # 2D counterclockwise rotation matrix   
@@ -176,6 +175,12 @@ def rot_2D(theta):
          [sin(theta), cos(theta)]]
         )
     return R
+
+# Note argument order
+def pose_transform_2D(r_B, r_IB_I, theta_I_B):
+    R = rot_2D(theta_I_B)
+    r_I = np.matmul(R, r_B) + r_IB_I
+    return r_I
 
 # Update a plot object to (erase old rectangle and) plot new rectangle
 # CENTERED on x and y, with heading about center, h
@@ -250,7 +255,6 @@ def animate_rect(cur_fig, cur_axes, pos_x, pos_y, theta_z, *args, **kwargs):
 
             if len(args) > 0:  # plot inputs
                 u_vec = input_array[i,:]
-                print(u_vec)
                 if (collage == False) and (i > 0):  # remove last
                     qu1.remove()
                     qu2.remove()
@@ -276,12 +280,5 @@ def animate_rect(cur_fig, cur_axes, pos_x, pos_y, theta_z, *args, **kwargs):
             if record:
                 writer.grab_frame()
             else:
-                plt.pause(0.15)
-
+                plt.pause(0.05)
     plt.show()
-
-# Note argument order
-def pose_transform_2D(r_B, r_IB_I, theta_I_B):
-    R = rot_2D(theta_I_B)
-    r_I = np.matmul(R, r_B) + r_IB_I
-    return r_I
