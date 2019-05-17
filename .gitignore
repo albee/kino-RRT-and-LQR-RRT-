@@ -1,0 +1,4 @@
+*.pyc
+*.m~
+planner-ad
+/doc/*
