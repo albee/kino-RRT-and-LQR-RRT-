@@ -166,12 +166,6 @@ def random_steer(nearest_node, rand_state, d_max, ctrl_bounds, dt, t_step, bound
         # plt.pause(1)
         while t_k < t_step:
 
-            # max_mag = np.amax(np.absolute(u_optimal))
-            # if max_mag > my_sat.Fmax:
-            #     u_optimal = u_optimal/max_mag
-            #     # u_optimal = np.clip(u_optimal, -my_sat.Fmax, my_sat.Fmax)
-            #     # print "scaled u", u_optimal
-
             for i in range(len(u_optimal)):
                 if u_optimal[i] < 0:
                     u_optimal[i] = 0
@@ -188,12 +182,6 @@ def random_steer(nearest_node, rand_state, d_max, ctrl_bounds, dt, t_step, bound
                 break
             new_state = new_state_temp
 
-            # wrap angle
-            # theta = new_state[4]
-            # theta = theta%(2*math.pi)
-            # if theta > math.pi:
-            #     theta -= 2*math.pi
-            # new_state[4] = theta
             t_k += dt
 
         option_dist = L2_distance(new_state, rand_state)

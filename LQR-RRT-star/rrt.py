@@ -36,6 +36,9 @@ def rrt(initial_state, goal_state, bounds, ctrl_bounds, dt, t_step, **kwargs):
     # Return nodes, edges, and goal path
     return V, E, goal_path
 
+'''
+Is this Guided-Kino-RRT?
+'''
 def kino_rrt(initial_state, goal_state, bounds, ctrl_bounds, dt):
     # Unpack state bounds
     x_min  = bounds[0]
@@ -230,21 +233,20 @@ def kino_rrt_star(initial_state, goal_state, bounds, ctrl_bounds, dt, t_step, sh
             E.append([nearest_node, new_node])
             ### kino-RRT
 
-
             ### RRT*
-            # else:
-            #     radius = lqr_rrt_star.get_ball_radius( len(V), state_dimension, volume_obstacle_free, max_dist )
-            #     near_nodes = lqr_rrt_star.LQR_near(V, E, new_node, radius)
-            #     V.append(new_node)
-            #     if show_anim == True:
-            #         print "near nodes:", len(near_nodes)
-            #         plot_near_nodes(near_nodes, fig_num, new_node, rand_state)
+            else:
+                radius = lqr_rrt_star.get_ball_radius( len(V), state_dimension, volume_obstacle_free, max_dist )
+                near_nodes = lqr_rrt_star.LQR_near(V, E, new_node, radius)
+                V.append(new_node)
+                if show_anim == True:
+                    print "near nodes:", len(near_nodes)
+                    plot_near_nodes(near_nodes, fig_num, new_node, rand_state)
 
-            #     # Choose a parent for x_new: choose_parent()
-            #     lqr_rrt_star.wire_to_x_new(near_nodes, new_node, nearest_node, E)
+                # Choose a parent for x_new: choose_parent()
+                lqr_rrt_star.wire_to_x_new(near_nodes, new_node, nearest_node, E)
 
-            #     # Attempt to rewire x_near: rewire()
-            #     lqr_rrt_star.rewire_from_x_new(near_nodes, new_node, E, fig_num, show_anim)
+                # Attempt to rewire x_near: rewire()
+                lqr_rrt_star.rewire_from_x_new(near_nodes, new_node, E, fig_num, show_anim)
             ### RRT*
 
             if show_anim == True:
@@ -253,7 +255,6 @@ def kino_rrt_star(initial_state, goal_state, bounds, ctrl_bounds, dt, t_step, sh
             ### Bookkeeping
             counter += 1
             goal_distance = lqr_rrt_star.lqr_distance(new_node.state, goal_state)
-            # goal_distance = math.sqrt((new_node.state[0]-goal_state[0])**2 + (new_node.state[1]-goal_state[1])**2)
 
             if goal_distance < lowest_distance:
                 lowest_distance = goal_distance
@@ -270,6 +271,7 @@ def kino_rrt_star(initial_state, goal_state, bounds, ctrl_bounds, dt, t_step, sh
     return V, E, goal_path
 
 '''
+kino-RRT-Euclidean?
 RRT*, with forward evaluation of 3DoF underactuated spacecraft dynamics.
 Essentially, merges rrt_star() and kino_rrt() with modifications
 to rrt_star() for dynamical constraints (e.g. new cost-to-go metric).
@@ -355,23 +357,6 @@ def kino_rrt_star_new_metric(initial_state, goal_state, bounds, ctrl_bounds, dt,
         V.append(new_node)
         E.append([nearest_node, new_node])
         ### kino-RRT
-
-
-        ### RRT*
-        # else:
-        #     radius = lqr_rrt_star.get_ball_radius( len(V), state_dimension, volume_obstacle_free, max_dist )
-        #     near_nodes = lqr_rrt_star.LQR_near(V, E, new_node, radius)
-        #     V.append(new_node)
-        #     if show_anim == True:
-        #         print "near nodes:", len(near_nodes)
-        #         plot_near_nodes(near_nodes, fig_num, new_node, rand_state)
-
-        #     # Choose a parent for x_new: choose_parent()
-        #     lqr_rrt_star.wire_to_x_new(near_nodes, new_node, nearest_node, E)
-
-        #     # Attempt to rewire x_near: rewire()
-        #     lqr_rrt_star.rewire_from_x_new(near_nodes, new_node, E, fig_num, show_anim)
-        ### RRT*
 
         if show_anim == True:
             update_plot_path_np_no_goal(E[-1], fig_num)
