@@ -7,14 +7,14 @@ Oliver Jia-Richards, Keenan Albee, Hailee Hettrick
 import random
 from tree_auxiliary import *
 import rrt_auxiliary as kino_rrt_aux
-import basic_rrt_auxiliary as rrt_aux
-import rrt_star_auxiliary as rrt_star_aux
 import lqr_rrt_star_auxiliary as lqr_rrt_star
 import numpy as np
 import math
 from plot_auxiliary import *
 
-
+'''
+Mandatory function call to rrt in order to access other functions in this file
+'''
 def rrt(initial_state, goal_state, bounds, ctrl_bounds, dt, t_step, **kwargs):
     # Parse keyword arguments
     kino = True  # run kino-rrt
@@ -32,169 +32,9 @@ def rrt(initial_state, goal_state, bounds, ctrl_bounds, dt, t_step, **kwargs):
         V, E, goal_path = kino_rrt_star(initial_state, goal_state, bounds, ctrl_bounds, dt, t_step, show_anim)
     elif kino and not star:
         V, E, goal_path = kino_rrt(initial_state, goal_state, bounds, ctrl_bounds, dt)
-    elif not kino and star:
-        V, E, goal_path = rrt_star(initial_state, goal_state, bounds)
-    elif not kino and not star:
-        V, E, goal_path = basic_rrt(initial_state, goal_state, bounds)
 
     # Return nodes, edges, and goal path
     return V, E, goal_path
-
-
-def basic_rrt(initial_state, goal_state, bounds):
-    # Unpack state bounds
-    x_min  = bounds[0]
-    x_max  = bounds[1]
-    y_min  = bounds[2]
-    y_max  = bounds[3]
-
-    # Unpack goal state
-    x_goal  = goal_state[0]
-    y_goal  = goal_state[1]
-
-    # Define maximum movement distance as 1/25 of the x range
-    d_max = (x_max-x_min)/25.0
-
-    # Create start node
-    start_node = SearchNode(initial_state)
-
-    # Initialize lists of nodes and edges
-    V = [start_node]
-    E = []
-
-    # Initialize goal path
-    goal_path = None
-
-    # Initialize variable to track lowest distance
-    lowest_distance = math.sqrt((initial_state[0]-goal_state[0])**2 + (initial_state[1]-goal_state[1])**2)
-
-    # Sample until path to goal is found
-    # Goal bias has been removed
-    counter = 1
-    while goal_path is None:
-
-
-        x_rand  = random.uniform(x_min, x_max)
-        y_rand  = random.uniform(y_min, y_max)
-
-
-        rand_state = (x_rand, y_rand)
-
-        # Determine nearest node
-        nearest_node = rrt_aux.nearest(V, rand_state)
-
-        # Steer towards nearest node
-        new_node = rrt_aux.steer(nearest_node, rand_state, d_max)
-
-        # Check if new node is in bounds
-        if not rrt_aux.in_bounds(new_node.state, bounds):
-            continue
-
-        # Add new node to node list
-        V.append(new_node)
-
-        # Add new edge to edge list
-        # edge = [nearest_node.state, new_node.state]
-        # E.append(edge)
-
-        E.append([nearest_node, new_node])
-
-        counter += 1
-        if counter == 1000:
-            goal_path = Path(new_node)
-            print "max reached"
-            break
-
-        # Check lowest distance
-        goal_distance = math.sqrt((new_node.state[0]-goal_state[0])**2 + (new_node.state[1]-goal_state[1])**2)
-        if goal_distance < lowest_distance:
-            lowest_distance = goal_distance
-            print(lowest_distance)
-
-        # Check if new node is the goal
-        if goal_distance < 0.01:
-            goal_path = Path(new_node)
-            print "donezo!"
-            break
-
-    return V, E, goal_path
-
-
-def rrt_star(initial_state, goal_state, bounds):
-    # Unpacking
-    x_min = bounds[0]; x_max = bounds[1]; y_min = bounds[2]; y_max = bounds[3]
-    x_goal = goal_state[0]; y_goal = goal_state[1]
-
-    # Parameters
-    record = False
-    max_count = 3000
-    max_dist = (x_max - x_min)/5.0
-    goal_tol = 0.001  # goal tolerance
-
-    start_node = SearchNode(initial_state)
-
-    # Initialize lists of nodes and edges, goal path, distance
-
-    state_dimension = initial_state.size
-    volume_obstacle_free = rrt_star_aux.volume_obstacle_free(bounds, state_dimension)
-
-    # Setup
-    V = [start_node]
-    E = []
-    goal_path = None
-    goal_distance = float('inf')
-    lowest_distance = math.sqrt((initial_state[0]-goal_state[0])**2 + (initial_state[1]-goal_state[1])**2)
-
-    fig_num = init_plot_path_np_no_goal(V, E, bounds)
-    plt.pause(6)
-    # RRT loop: sample until path to goal is found
-    counter = 1
-    writer = setup_movie_writer(8)
-    # with writer.saving(plt.figure(fig_num), "blargh.mp4", 400):
-    while counter <= max_count and goal_distance > goal_tol:
-        # sample_free()
-        x_rand  = random.uniform(x_min, x_max)
-        y_rand  = random.uniform(y_min, y_max)
-        rand_state = (x_rand, y_rand)
-
-        # Determine nearest node: nearest()
-        nearest_node = rrt_star_aux.nearest(V, rand_state)
-
-        # Steer towards nearest node: steer()
-        new_node = rrt_star_aux.steer(nearest_node, rand_state, max_dist)
-
-        # Check if new node is in bounds: obstacle_free()
-        if not rrt_star_aux.in_bounds(new_node.state, bounds):
-            continue
-        else:  # RRT* begins here
-            radius = rrt_star_aux.get_ball_radius( len(V), state_dimension, volume_obstacle_free, max_dist )
-            near_nodes = rrt_star_aux.near(V, E, new_node, radius)
-            V.append(new_node)
-
-            plot_near_nodes(near_nodes, fig_num, new_node, rand_state)
-
-            rrt_star_aux.wire_to_x_new(near_nodes, new_node, nearest_node, E)
-
-            rrt_star_aux.rewire_from_x_new(near_nodes, new_node, E, fig_num)
-
-        update_plot_path_np_no_goal(E[-1], fig_num)
-
-        ### Bookkeeping
-        counter += 1
-        goal_distance = math.sqrt((new_node.state[0]-goal_state[0])**2 + (new_node.state[1]-goal_state[1])**2)
-       
-        if goal_distance < lowest_distance:
-            lowest_distance = goal_distance
-            goal_path = Path(new_node)
-            print "closest node to state_g so far: ", lowest_distance
-
-        # if record:
-        #     writer.grab_frame()
-
-        print("max count reached...")
-
-    return V, E, goal_path
-
 
 def kino_rrt(initial_state, goal_state, bounds, ctrl_bounds, dt):
     # Unpack state bounds
@@ -278,9 +118,6 @@ def kino_rrt(initial_state, goal_state, bounds, ctrl_bounds, dt):
         V.append(new_node)
 
         # Add new edge to edge list
-        # edge = [nearest_node.state, new_node.state]
-        # E.append(edge)
-
         E.append([nearest_node, new_node])
 
         # Check lowest distance
@@ -354,7 +191,6 @@ def kino_rrt_star(initial_state, goal_state, bounds, ctrl_bounds, dt, t_step, sh
     with writer.saving(plt.figure(fig_num), "blargh.mp4", 400):
         while counter <= max_count and goal_distance > goal_tol:
             # print "Iteration number: ", counter
-
             if sample_counter == goal_bias_count:
 
                 x_rand  = x_goal
@@ -543,7 +379,6 @@ def kino_rrt_star_new_metric(initial_state, goal_state, bounds, ctrl_bounds, dt,
         ### Bookkeeping
         counter += 1
         goal_distance = lqr_rrt_star.L2_distance(new_node.state, goal_state)
-        # goal_distance = math.sqrt((new_node.state[0]-goal_state[0])**2 + (new_node.state[1]-goal_state[1])**2)
 
         if goal_distance < lowest_distance:
             lowest_distance = goal_distance

@@ -108,12 +108,6 @@ def LQR_steer(nearest_node, rand_state, d_max, ctrl_bounds, dt, t_step, bounds):
         # plt.pause(1)
         while t_k < t_step:
 
-            # max_mag = np.amax(np.absolute(u_optimal))
-            # if max_mag > my_sat.Fmax:
-            #     u_optimal = u_optimal/max_mag
-            #     # u_optimal = np.clip(u_optimal, -my_sat.Fmax, my_sat.Fmax)
-            #     # print "scaled u", u_optimal
-
             for i in range(len(u_optimal)):
                 if u_optimal[i] < 0:
                     u_optimal[i] = 0
@@ -398,7 +392,6 @@ def volume_obstacle_free(bounds, state_dimension):
 
 
 ### LQR support
-
 # L2 norm, with tweak for angle
 def L2_distance(state_from, state_to):
     print "don't use me too!!"
