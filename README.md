@@ -9,8 +9,8 @@ Please see the included final report for documentation.
 Here are some of the Guided-Kino-RRT results:
 
 ![ ](/media/1.gif)
-![ ](/media/1.png)
 ![ ](/media/2.gif)
-![ ](/media/2.png)
 ![ ](/media/3.gif)
+![ ](/media/1.png)
+![ ](/media/2.png)
 ![ ](/media/3.png)
